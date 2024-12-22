@@ -1,0 +1,43 @@
+stages:
+  - build
+  - test
+  - lint
+
+variables:
+  DOCKER_IMAGE: your-docker-hub-username/your-app-name  # Replace with your Docker Hub username and app name
+  DOCKER_PASSWORD: $DOCKER_PASSWORD
+  DOCKER_USERNAME: $DOCKER_USERNAME
+
+build_and_push:
+  stage: build
+  image: docker:stable
+  before_script:
+    - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+  script:
+    - docker build -t $DOCKER_IMAGE:latest -f Dockerfile .
+    - docker push $DOCKER_IMAGE:latest
+
+test:
+  stage: test
+  image: python:3.8
+  script:
+    - pip install -r requirements.txt
+    - pytest app/test_streamlit_app.py  # Run FastAPI and Streamlit app tests
+
+lint:
+  stage: lint
+  image: docker:stable
+  before_script:
+    - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+  script:
+    - docker build -t lint-image -f Dockerfile.lint .
+    - docker run lint-image  # Run linting within the Docker environment
+
+deploy:
+  stage: deploy
+  environment: production
+  image: plugins/terraform
+  script:
+    - echo "Deploying to production..."
+    - terraform apply
+
